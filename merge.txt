@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Book Name</th>
+                <th>Author</th>
+                <th>Publish Year</th>
+                <th>Rating</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>To Kill a Mockingbird</td>
+                <td>Harper Lee</td>
+                <td>1960</td>
+                <td>8.5</td>
+            </tr>
+            <tr>
+                <td>1984</td>
+                <td>George Orwell</td>
+                <td>1949</td>
+                <td>9.1</td>
+            </tr>
+            <tr>
+                <td>The Great Gatsby</td>
+                <td>F. Scott Fitzgerald</td>
+                <td>1925</td>
+                <td>8.7</td>
+            </tr>
+            <tr>
+                <td>Moby Dick</td>
+                <td>Herman Melville</td>
+                <td>1851</td>
+                <td>7.9</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
