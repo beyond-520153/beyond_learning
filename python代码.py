@@ -1,178 +1,204 @@
 from math import nan
-from operator import index
-from turtle import fill, forward
-
-from networkx import reverse
-import pandas as pd
-import numpy as np
-'''
-practice1:创建series
 
 import pandas as pd
 import numpy as np
-#方法1：列表创建
-s = pd.Series([1, 2, 3], index = ['a', 'b', 'c'])
-print(s)
-#方法2: 字典创建
-s = pd.Series({'a' : 1, 'b' : 2, 'c' : 3})
-print(s)
-#与numpy一起使用创建series
-s = pd.Series(np.arange(1, 5), index = np.arange(0, 4))
-print(s)
-#自定义索引
-s = pd.Series(np.zeros(5), index = np.arange(1, 6))
-print(s)
 '''
-
-'''
-practice2:创建series
+practice1:创建dataframe
 
 import pandas as pd
 import numpy as np
-s = pd.Series(np.arange(10, 60, 10), index = ['a', 'b', 'c', 'd', 'e'values], name = 'my_series', dtype=float)
-print(s)
+#使用字典创建
+df = pd.DataFrame({
+    'name' : ['张三', '李四', '王五'],
+    'age' : [20, 25, 30],
+    'city' : ['北京', '上海', '广州']
+})
+print(df)
+
+#使用numpy的randint创建
+d = pd.DataFrame(np.random.randint(1, 100, size = (4, 3)), columns = ['A', 'B', 'C'])
+print(d)
 '''
 
 '''
-practice3:查看series的属性
+practice2:查看信息
 
-import pandas as pd
-s = pd.Series([10, 20, 30, 40, 50], index=['a', 'b', 'c', 'd', 'e'])
-print(s.values, s.index, s.shape, s.size, s.dtype, s.name)
+df = pd.DataFrame({
+    'name' : ['张三', '李四', '王五'],
+    'age' : [20, 25, 30],
+    'city' : ['北京', '上海', '广州']
+})
+print(df.head(3))
+print(df.tail(2))
+print(df.size)
+print(df.columns)
+print(df.dtypes)
+print(df.describe())
 '''
 
 '''
-practice4:位置索引和标签索引
+practice3:列的获取
 
-import pandas as pd
-s = pd.Series([10, 20, 30, 40, 50], index=['a', 'b', 'c', 'd', 'e'])
-print(s.iloc[2])
-print(s.loc['c'])
-print(s.iloc[1:4])
-print(s.loc['b' : 'd'])
-print(s.tail(2))
-print(s.head(3))
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+
+print(df.Name)
+print(df['Name'])
+print(df[['Name', 'Score']], df[['Name', 'Score']].dtypes)
+print(df)
 '''
 
 '''
-practice5:布尔索引
+practice4:行的获取
 
-import pandas as pd
-s = pd.Series([15, 25, 35, 45, 55, 65, 75, 85, 95])
-print(s[s > 50])
-print(s[(s >= 30) & (s <= 70)])
-print(s[s % 2 == 0])
-print(s[s % 5 == 0])
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+print(df.iloc[1])
+print(df.iloc[1 : 4])
+print(df.iloc[0 : 5 : 2])
+print(df.iloc[0 : 3])
+print(df.iloc[-1 : -4 : -1])
 '''
 
 '''
-practice6:head和tail
+practice5:同时选择行和列
 
-s = pd.Series(range(1, 101))
-print(s.head())
-print(s.head(10))
-print(s.tail())
-print(s.tail(8))
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+print(df)
+print(df.loc[0]['Score'])
+print(df.iloc[1, 1])
+print(df.loc[1 : 3][['Name', 'Score']])
+print(df.iloc[1 : 4, 0 : 3])
+print(df[['Name', 'Score']])
 '''
 
 '''
-practice7:检测缺失值
+practice6:单条件筛选
 
-s = pd.Series([1, None, np.nan, 4, pd.NA, 6, None, 8])
-print(s[s.isna()].index)
-print(s[s.isna()].size)
-print(s.count())
-print(s[s.isna()].size / s.size)
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+print(df[df.Age > 30])
+print(df[df.City == '北京'])
+print(df[df.Score >= 90])
 '''
 
 '''
-practice8:填充缺失值
+practice7:多条件筛选
 
-s = pd.Series([10, None, 30, None, 50, None, 70])
-print(s.fillna(0))
-print(s.ffill())
-print(s.bfill())
-print(s.fillna(s.mean()))
-print(s.fillna(s.median()))
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+print(df[(df.Age > 25) & (df.Score > 80)])
+print(df[(df.City == '北京') | (df.City == '上海')])
+print((df.Age <= 30) & (df.Age >= 25))
+print(df[df.Score != 85])
 '''
 
 '''
-practice9:
+practice8:query的使用
 
-s = pd.Series([1, None, 3, np.nan, 5, None, 7, 8])
-print(s.dropna())
-s_dropped = s.dropna()
-print(s_dropped.reset_index(drop=True))
-print(s.dropna(inplace=True))
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+print(df.query('Age > 30'))
+print(df.query('City == "北京" & Score > 80'))
 '''
 
 '''
-practice10:基本运算
+practice9:数据修改
 
-s1 = pd.Series([1, 2, 3, 4, 5])
-s2 = pd.Series([5, 4, 3, 2, 1])
-print(s1 + s2)
-print(s1 - s2)
-print(s1 * s2)
-print(s1 / s2)
-print(s1 ** 2)
-print(np.sqrt(s1))
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+df.loc[df['Name'] == 'Alice', 'Score'] = 90
+df.loc[df['Age'] > 30, 'Score'] += 5
+df.loc[df['City'] == '深圳', 'City'] = '广州'
+df['Grade'] = np.where(df.Score >= 90, 'A', np.where(df.Score >= 80, 'B', np.where(df.Score >= 70, 'C', 'D')))
+print(df)
 '''
 
 '''
-practice11:统计方法
+practice10:添加和删除
 
-s = pd.Series([15, 25, 35, 45, 55, 65, 75, 85, 95])
-print(s.sum())
-print(s.mean())
-print(s.median())
-print(s.std())
-print(s.var())
-print(s.max())
-print(s.min())
-print(s.argmin())
-print(s.argmax())
-print(s.cumsum()) #累计和：求出当前位置之前（包括当前位置）所有元素的和
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Age': [25, 30, 35, 28, 32],
+    'Score': [85, 92, 78, 88, 95],
+    'City': ['北京', '上海', '广州', '北京', '深圳']
+})
+df['Department'] = 'CS'
+df.loc[4] = ['Frank', 26, 88, '上海', 'CS']
+df.drop('City', axis = 1, inplace = True) #0是行，1是列
+df.drop(2, inplace = True) #inplace表示在原df上进行操作
+print(df)
 '''
 
 '''
-practice12:value_counts和unique
+practice11:检测填充缺失值
 
-s = pd.Series(['A', 'B', 'A', 'C', 'B', 'A', 'D', 'C', 'A', 'B'])
-print(s.value_counts())
-print(s.nunique())
-print(s.value_counts())
-print(s.value_counts() / s.count())
-print(s.mode())
+df = pd.DataFrame({
+    'A': [1, 2, np.nan, 4, 5],
+    'B': [np.nan, 2, 3, np.nan, 6],
+    'C': [1, np.nan, 3, 4, np.nan],
+    'D': [1, 2, 3, 4, 5]
+})
+print(df.isna())
+print(df.count()) #检测每列的缺失值的数量
+print(df.dropna(axis = 1)) #删除所有包含缺失值的行
+print(df.fillna(0))
+print(df.fillna(df.mean())) #用每列的均值填充缺失值
 '''
 
 '''
-practice13:数据标准化
+practice12:填充缺失值
 
-s = pd.Series([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
-s_mean = s.mean()
-s_std = s.std()
-s_max = s.max()
-s_min = s.min()
-print((s - s_mean) / s_std)
-print((s - s_min) / (s_max - s_min))
-s1 = (s - s_mean) / s_std
-print(s1.mean(), s1.std())
+df = pd.DataFrame({
+    'A': [1, 2, np.nan, 4, 5],
+    'B': [np.nan, 2, 3, np.nan, 6],
+    'C': [1, np.nan, 3, 4, np.nan],
+    'D': [1, 2, 3, 4, 5]
+})
+print(df.ffill())
+print(df.bfill())        
+print(df.dropna())       
+print(df.dropna(axis = 1))  
 '''
 
 '''
-practice14:where的使用
+practice13:排序
 
-s = pd.Series([10, 25, 33, 48, 52, 67, 74, 89, 95])
-print(np.where(s < 30, 0, s))
-print(np.where(s > 80, 100, s))
-print(np.where((s > 30) & (s < 60), 50, s))
-print(np.where(s >= 60, '及格', '不及格'))
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'David', 'Eve'],
+    'Score': [85, 92, 85, 92, 88],
+    'Age': [25, 30, 35, 28, 32]
+})
+print(df.sort_values('Score', ascending= False))   #ascending = False说明是降序排序
+print(df.sort_values(['Score', 'Age'], ascending=[False, True]))     
 '''
-
-s = pd.Series([85, 92, 78, 95, 88, 92, 76, 89, 95, 84])
-print(s.sort_values())
-print(s.sort_values(ascending= False)) #降序排序
-print(s.sort_index())
-
-
+                                                                
