@@ -1,5 +1,7 @@
-Book Name,Author,Publish Year,Rating
-To Kill a Mockingbird,Harper Lee,1960,8.5
-1984,George Orwell,1949,9.1
-The Great Gatsby,F. Scott Fitzgerald,1925,8.7
-Moby Dick,Herman Melville,1851,7.9
+﻿员工ID,姓名,部门,工资,入职日期,绩效分,加班时长
+101,张三,销售部,8000.0,2020-01-15,A,20.0
+102,李四,技术部,12000.0,2019-03-20,B,35.0
+103,王五,销售部,,2021-06-10,A,15.0
+104,赵六,技术部,15000.0,2018-11-01,C,
+105,钱七,市场部,9000.0,2022-02-28,B,25.0
+106,孙八,市场部,,2020-08-15,A,30.0
