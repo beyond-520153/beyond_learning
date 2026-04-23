@@ -1,152 +1,265 @@
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from datetime import datetime, date
 
-# 设置随机种子，保证结果可复现
-np.random.seed(42)
+# 设置中文字体
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 
-# 生成10000条销售记录
-n = 10000
+# 示例数据
+months = ['1月', '2月', '3月', '4月', '5月', '6月']
+sales_2023 = [120, 135, 150, 140, 160, 180]
+sales_2024 = [130, 145, 160, 155, 175, 195]
 
-data = {
-    '订单号': [f'ORD-{i:05d}' for i in range(1, n+1)],
-    '订单日期': pd.date_range('2024-01-01', periods=n, freq='h').strftime('%Y-%m-%d'),
-    '客户ID': np.random.randint(1000, 2000, n),
-    '客户等级': np.random.choice(['普通', '白银', '黄金', '钻石'], n, p=[0.5, 0.25, 0.15, 0.1]),
-    '产品类别': np.random.choice(['电子产品', '服装', '食品', '家居', '美妆'], n, p=[0.3, 0.25, 0.2, 0.15, 0.1]),
-    '产品名称': np.random.choice(['手机', '电脑', 'T恤', '连衣裙', '零食', '饮料', '沙发', '床垫', '面膜', '口红'], n),
-    '单价': np.random.randint(50, 5000, n),
-    '数量': np.random.randint(1, 10, n),
-    '折扣': np.random.choice([0, 0.05, 0.1, 0.15, 0.2], n, p=[0.6, 0.15, 0.1, 0.08, 0.07]),
-    '是否退货': np.random.choice([0, 1], n, p=[0.95, 0.05]),
-    '发货城市': np.random.choice(['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安'], n),
-    '配送方式': np.random.choice(['快递', '同城配送', '门店自提'], n, p=[0.7, 0.2, 0.1])
-}
-
-df = pd.DataFrame(data)
-df['销售额'] = df['单价'] * df['数量'] * (1 - df['折扣'])
-df.loc[df['是否退货'] == 1, '销售额'] = 0
-
-# 随机插入一些缺失值
-missing_idx = np.random.choice(n, size=int(n*0.03), replace=False)
-df.loc[missing_idx, '折扣'] = np.nan
-
-#将数值保存到excel文件里
-df.to_excel('output.xlsx')
-
-#日期处理：将订单日期转换为datetime类型，并提取 年、月、日、星期几 为新列
-df['订单日期'] = pd.to_datetime(df['订单日期'])
-df['年'] = df['订单日期'].dt.year
-df['月'] = df['订单日期'].dt.month
-df['日'] = df['订单日期'].dt.day
-df['星期几'] = df['订单日期'].dt.day_name() #day_name()获取星期几
-
-#缺失值处理：折扣列的缺失值，用该产品类别的平均折扣填充
-#获取折扣列的缺失值数量
-#print(df['折扣'].isna().sum()) 
-df['折扣'].fillna(df['折扣'].mean(), inplace = True) #使用inplace = True来直接在原表上进行修改
-
-#异常值检测：找出单价 > 4000 或数量 > 8 的订单，标记为 异常标记 列（True/False）
-df['异常标记'] = False #首先初始化所有异常标记都为False
-df.loc[(df['单价'] > 4000) | (df['数量'] > 8) , '异常标记'] = True #满足条件的改为True
-
-#删除重复：检查是否有重复订单号，如有则删除
-print(df['订单号'].nunique(), df['订单号'].count()) #获取去重之后的数值,以及订单号的唯一数值数
-#因为count和nunique数值相同，所以说明没有相同的订单号，但是依然进行去重
-df = df.drop_duplicates(subset = ['订单号'])
-
-#新增列：计算 折扣金额 = 单价 × 数量 × 折扣
-df['折扣金额'] = df['单价'] * df['数量'] * df['折扣']
-
-#月度销售趋势：按月统计总销售额、订单数、平均客单价（销售额/订单数）
-month_data = df.groupby('月').agg(
-    总销售额 = ('销售额', 'sum'),
-    订单数 = ('订单号', 'count'),
-    平均客单价 = ('销售额', 'mean')
+'''
+practice1：折线图
+plt.figure(figsize=(10, 6))
+plt.title('月度销售额对比')
+plt.plot(
+    months, sales_2023,
+    marker = 'o',
+    linewidth = 2,
+    color = 'blue',
+    label = '2023年'
+)
+plt.plot(
+    months, sales_2024,
+    marker = 'o',
+    linewidth = 2,
+    color = 'orange',
+    label = '2024年'
 )
 
-#客户等级分析：统计各等级客户的消费总额、订单数、人均消费
-customer_data = df.groupby('客户等级').agg(
-    消费总额 = ('销售额', 'sum'),
-    订单数 = ('订单号', 'count'),
-    人均消费 = ('销售额', 'mean')
-)
+plt.xlabel('月份')
+plt.ylabel('销售额(万元)')
 
-#产品类别分析：找出销售额前3的产品类别，以及它们的主力产品（销售额最高的产品）
-product_data = df.groupby('产品类别')['销售额'].sum()
+for i, (x, y) in enumerate(zip(months, sales_2023)):
+    plt.text(i, y + 3, str(y), ha='center', va='bottom', fontsize = 9)
 
-top3_best_sell_product = product_data.reset_index().sort_values('销售额', ascending= False).head(3)
-best_sell_product = top3_best_sell_product.head(1)
+for i, (x, y) in enumerate(zip(months, sales_2024)):
+    plt.text(i, y + 3, str(y), ha = 'center', va = 'bottom', fontsize = 9)
 
-#城市分析：计算每个城市的销售额、订单数、平均折扣，找出业绩最好的城市
-city_data = df.groupby('发货城市').agg(
-    销售额 = ('销售额', 'sum'),
-    订单数 = ('订单号', 'count'),
-    平均折扣 = ('折扣', 'mean')
-)
+plt.legend(loc = 'upper left', title = '年份', fontsize = 9)
+plt.grid(True, linestyle = '--', alpha = 0.5)
+plt.show()
+'''
 
-best_sell_city = city_data.sort_values('销售额').head(1).reset_index()
+'''
+practice2:柱状图
 
-#退货分析：计算整体退货率，以及各产品类别的退货率
-total_return_rate = df['是否退货'].mean()
-print(f'总体退货率是：{total_return_rate}')
-product_return_rate = df.groupby('产品类别')['是否退货'].mean()
+plt.figure(figsize = (10, 8))
+plt.bar(months, sales_2024,
+        color = 'steelblue',
+        edgecolor = 'black', #边框的颜色为黑色
+        linewidth = 1, #边框的线长为1
+        alpha = 0.7
+        )
+plt.title('2024年月度销售额')
 
-#交叉分析：创建透视表，行=客户等级，列=产品类别，值=销售额，聚合=求和
-customer_pivot_table = df.pivot_table(index = '客户等级', columns = '产品类别', values = '销售额', aggfunc = 'sum')
+for i, (month, sale) in enumerate(zip(months, sales_2024)):
+    plt.text(i, sale + 3, str(sale), ha = 'center', va = 'bottom', fontsize = 9) #ha是水平对齐，va是垂直对齐
 
-#多级分组：按 发货城市 和 产品类别 分组，计算销售额总和和平均折扣
-category_table = df.groupby(['发货城市', '产品类别']).agg(
-    销售总额 = ('销售额', 'sum'),
-    平均折扣 = ('折扣', 'mean')
-)
+plt.ylim(100, 250)
+plt.show()
+'''
 
-#累计统计：按日期顺序，计算每日累计销售额
-day_sell_count = df.groupby('订单日期')['销售额'].sum().sort_index().cumsum()
+'''
+practice3:饼图
 
-#排名：找出销售额最高的前10个客户ID
-customer_sell_count = df.groupby('客户ID')['销售额'].sum()
-top10_sell_customer = customer_sell_count.reset_index().sort_values('销售额', ascending = False).head(10)
+products = ['手机', '电脑', '平板', '耳机', '手表']
+sales_ratio = [35, 28, 18, 12, 7]
+plt.figure(figsize= (10, 8))
+#autopct表示小数点位数，explode表示突出，传入的参数是一个列表，shadow表示阴影，startangle是起始角度
+plt.pie(sales_ratio, labels = products, autopct = '%1.1f%%', explode = [0.05, 0, 0, 0, 0], shadow= True, startangle= 90)
 
-#留存分析：计算每个月的活跃客户数（有购买记录的客户去重计数）
-active_customer_count = df['客户ID'].nunique()
+plt.title('产品销售额占比')
+plt.show()
+'''
 
-#R（最近购买时间）：计算每个客户最后购买日期距今天数
-today = datetime.today() #使用datetime.today()获取今天日期
-current_customer_buy = df.groupby('客户ID')['订单日期'].max() #使用max获取最大消费日期（最后消费日期）
-R = (today - current_customer_buy).dt.days.reset_index()
-R.rename(columns = {'订单日期': '上一次消费'}, inplace = True)
+'''
+practice4:散点图加上polyfit进行拟合
 
-#F（购买频率）：计算每个客户的订单数
-F = df.groupby('客户ID')['订单号'].nunique().reset_index()
-F.rename(columns = {'订单号': '订单量'}, inplace = True)
+ad_cost = [5, 8, 12, 15, 20, 25, 30, 35, 40, 45]
+sales = [50, 65, 80, 95, 110, 130, 145, 160, 175, 190]
 
-#M（消费金额）：计算每个客户的消费总额
-M = df.groupby('客户ID')['销售额'].sum().reset_index()
-M.rename(columns={'销售额': '消费额'}, inplace = True)
+plt.figure(figsize= (10, 8))
+plt.title('广告费与销售额关系')
+plt.xlabel('广告费（万元）')
+plt.ylabel('广告费（万元）')
+plt.scatter(ad_cost, sales, color = 'red', alpha = 0.6, s = 100)
+xielv, jieju = np.polyfit(ad_cost, sales, deg = 1) #使用polyfit对直线进行拟合，返回截距和斜率
 
-#将三张表合成一张，保证index是对应的
-rfm = R.merge(F, on = '客户ID').merge(M, on = '客户ID')
+x_fit = np.linspace(min(ad_cost), max(ad_cost), 100) #获取x坐标的array
+y_fit = x_fit * xielv + jieju #使用计算获取y的array
 
-#根据 RFM 分数将客户分为：高价值客户、潜力客户、普通客户、流失客户
-#分别使用R，F，M的平均值来进行后续的判断
-aveg_R = rfm['上一次消费'].mean() 
-aveg_F = rfm['订单量'].mean() 
-aveg_M = rfm['消费额'].mean()
+plt.plot(x_fit, y_fit,
+         color = 'red',
+         linewidth = 1,
+         linestyle = '--'
+         )
+plt.show()
+'''
 
-conditions = [
-    (rfm['上一次消费'] < aveg_R) & (rfm['订单量'] > aveg_F) & (rfm['消费额'] > aveg_M), #高价值客户
-    (rfm['上一次消费'] < aveg_R) & (rfm['订单量'] > aveg_F), #潜力客户
-    (rfm['上一次消费'] >= aveg_R) & (rfm['订单量'] <= aveg_F) #流失客户
-]
-choices = ['高价值客户', '潜力客户', '流失客户']
+'''
+practice5:子图布局
 
-#使用select进行分类
-rfm['客户类型'] = np.select(conditions, choices, default = '普通客户')
-rfm.to_csv('客户类型分析表.csv')
+fig, axes = plt.subplots(2, 2, figsize = (10, 8))
+axes[0, 0].plot(months, sales_2024,
+                      color = 'steelblue',
+                      label = '2024年销售额图'
+                      )
 
-#计算每月的环比增长率：使用pct_change()函数
-monthly_sale_count = df.groupby('月')['销售额'].sum().reset_index()
-monthly_sale_count['环比增长率'] = monthly_sale_count['销售额'].pct_change() * 100
-print(monthly_sale_count)
-monthly_sale_count.to_csv('每月环比增长表.csv')
+axes[0, 1].bar(months, sales_2024,
+                     color = 'orange',
+                     edgecolor = 'black',
+                     alpha = 0.8
+                     )
+axes[1, 0].pie(sales_2024, labels = months,
+               autopct = '%1.1f%%',
+               shadow = True,
+               startangle = 90
+               )
+
+axes[1, 1].scatter(months, sales_2024)
+plt.show()
+'''
+
+'''
+practice6:多图叠加
+
+plt.figure(figsize = (10, 8))
+plt.bar(months, sales_2024,
+        color = 'orange',
+        edgecolor = 'black',
+        linewidth = 1,
+        alpha = 0.6,
+        label = '柱状图'
+        )
+plt.plot(months, sales_2024,
+         color = 'steelblue',
+         linewidth = 1,
+         marker = 'o',
+         label = '折线图'
+         )
+plt.legend(loc = 'upper left')
+plt.show()
+'''
+
+'''
+practice7:水平条形图
+
+products = ['手机', '电脑', '平板', '耳机', '手表', '相机']
+sales = [350, 280, 200, 150, 100, 80]
+
+#将两组数据组成一个dataframe，直接在dataframe中进行数值排序
+plt.figure(figsize = (10, 8))
+data = pd.DataFrame({
+    '产品': products,
+    '销量': sales
+}) 
+
+data.sort_values('销量', inplace=True)
+plt.barh(data['产品'], data['销量'],
+         color = 'orange',
+         edgecolor = 'black',
+         linewidth = 1,
+         alpha = 0.5
+         )
+for i, sale in enumerate(data['销量']): #直接使用data里面的数据进行输出
+    plt.text(sale, i, str(sale), ha = 'center', va = 'bottom', fontsize = 9)
+plt.ylabel('产品名称')
+plt.xlabel('销量（台）')
+plt.title('各产品销量排行', fontsize = 9)
+plt.show()
+'''
+
+'''
+practice8:堆叠面积图
+
+months = ['1月', '2月', '3月', '4月', '5月', '6月']
+sales_2023 = [120, 135, 150, 140, 160, 180]
+sales_2024 = [130, 145, 160, 155, 175, 195]
+
+plt.figure(figsize=(10, 6))
+
+# 堆叠面积图：fill_between的第二个参数是起始的y值，第三个参数是截止的y值
+# plt.fill_between(months, 0, sales_2023, alpha=0.5, label='2023年')
+# plt.fill_between(months, sales_2023, [sales_2023[i] + sales_2024[i] for i in range(len(months))], 
+#                  alpha=0.5, label='2024年')
+
+# 或者使用 stackplot（更简单）：直接传入多个y值的序列，每一个序列都加在在前一个上面
+plt.stackplot(months,sales_2023, sales_2024 , labels=['2023年', '2024年'], alpha=0.5)
+
+plt.title('两年销售额对比（面积图）')
+plt.xlabel('月份')
+plt.ylabel('销售额（万元）')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.show()
+'''
+
+'''
+practice9:直方图和箱型图
+
+data = np.random.normal(80, 10, 1000)
+fig, axes = plt.subplots(1, 2, figsize = (10, 8))
+axes[0].hist(data, bins = 20, color = 'green', edgecolor = 'black', alpha = 0.7)
+
+axes[1].boxplot(data, vert=False, patch_artist=True, #vert表示方向False表示水平方向，True表示垂直方向，patch_artist表示填充颜色
+                boxprops=dict(facecolor='lightblue', color='black'), #boxprops表示箱体的属性
+                whiskerprops=dict(color='black'), #whiskerprops表示箱线的属性
+                capprops=dict(color='black'), #capprops表示帽线属性
+                medianprops=dict(color='red', linewidth=2))  #medianprops表示中位数线的属性
+fig.suptitle('考试成绩分析')
+plt.show()
+'''
+
+
+months = ['1月', '2月', '3月', '4月', '5月', '6月']
+sales_2024 = [130, 145, 160, 155, 175, 195]
+x = range(len(months))
+
+plt.figure(figsize=(12, 6))
+
+# 绘制折线图
+plt.plot(x, sales_2024, 
+         marker='o', 
+         markersize=8,
+         linewidth=2.5,
+         color='steelblue',
+         label='2024年销售额')
+
+# 设置 X 轴刻度标签
+plt.xticks(x, months)
+
+# 添加数据标签
+for i, sale in enumerate(sales_2024):
+    offset = 5 if sale < 180 else -10
+    va = 'bottom' if sale < 180 else 'top'
+    plt.text(i, sale + offset, str(sale), ha='center', va=va, fontsize=10, fontweight='bold')
+
+# 添加水平参考线（平均值线）
+avg_sales = np.mean(sales_2024)
+plt.axhline(y=float(avg_sales), color='gray', linestyle='--', linewidth=1.5, label=f'平均值: {avg_sales:.1f}')
+
+# 标注最高点
+max_idx = sales_2024.index(max(sales_2024))
+max_month = months[max_idx]
+max_sale = max(sales_2024)
+plt.annotate(f'最高点: {max_sale}万元',
+             xy=(max_idx, max_sale),
+             xytext=(max_idx + 0.5, max_sale + 10),
+             arrowprops=dict(arrowstyle='->', color='red'),
+             fontsize=10, color='red')
+
+# 标题和标签
+plt.title('2024年月度销售额趋势', fontsize=14, fontweight='bold')
+plt.xlabel('月份', fontsize=12)
+plt.ylabel('销售额（万元）', fontsize=12)
+
+# 网格线（虚线，透明度0.3）
+plt.grid(True, linestyle='--', alpha=0.3)
+
+# 图例
+plt.legend(loc='upper left')
+plt.show()
