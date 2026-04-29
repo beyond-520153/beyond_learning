@@ -1,265 +1,195 @@
-import matplotlib.pyplot as plt
+import jieba
+from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.linear_model import LinearRegression
+from sklearn.feature_extraction.text import CountVectorizer
+# 查看数据的基本信息（形状、列名、数据类型）
 
-# 设置中文字体
+# 计算每门科目的平均值、最大值、最小值
+
+# 按班级（class）分组，计算每门科目的平均分
+
+# 绘制数学成绩的直方图（matplotlib）
+
+# 绘制数学和英语的散点图，观察相关性
+# 数据：学生考试成绩
+data = {
+    'name': ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十'],
+    'math': [85, 92, 78, 88, 95, 76, 89, 91],
+    'english': [78, 88, 85, 90, 92, 80, 86, 89],
+    'science': [90, 85, 82, 88, 94, 79, 91, 93],
+    'class': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B']
+}
+df = pd.DataFrame(data)
+'''
+print(df.info()) #查看基本数据
+print(df.describe()) #使用describe计算每一列的大致信息
+
+df_class = df.groupby('class')[['math', 'english', 'science']].mean() 
+
+fig, axes = plt.subplots(1, 2, figsize = (10, 9))
+
 plt.rcParams['font.sans-serif'] = ['SimHei']
-plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['axes.unicode_minus'] = False 
 
-# 示例数据
-months = ['1月', '2月', '3月', '4月', '5月', '6月']
-sales_2023 = [120, 135, 150, 140, 160, 180]
-sales_2024 = [130, 145, 160, 155, 175, 195]
 
+axes[0].hist(df['math'], label = '数学成绩分布直方图')
+axes[1].scatter(df['math'], df['english'], label = '数学/英语成绩散点图')
+axes[0].legend(loc = 'upper left')
+axes[1].legend(loc = 'upper left')
+axes[1].set_xlabel('数学/分')
+axes[1].set_ylabel('英语/分')
+
+plt.show()
 '''
-practice1：折线图
-plt.figure(figsize=(10, 6))
-plt.title('月度销售额对比')
-plt.plot(
-    months, sales_2023,
-    marker = 'o',
-    linewidth = 2,
-    color = 'blue',
-    label = '2023年'
+
+
+# 将数据划分为训练集和测试集（test_size=0.3, random_state=42）
+
+# 使用 OneHotEncoder 对 class 特征进行编码
+
+# 将编码后的特征与数值特征合并
+
+# 使用 LinearRegression（线性回归）训练模型
+
+# 计算测试集上的预测准确率（使用 R² 分数）
+class_encoder = OneHotEncoder(sparse_output= False)
+encoded_class = class_encoder.fit_transform(df[['class']])
+
+X = np.hstack([df[['math', 'english']], encoded_class])
+y = df['science']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    train_size= 0.7,
+    random_state= 42
 )
-plt.plot(
-    months, sales_2024,
-    marker = 'o',
-    linewidth = 2,
-    color = 'orange',
-    label = '2024年'
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+print(f"R² 分数: {model.score(X_test, y_test):.3f}")
+
+
+
+# 使用 jieba 对所有文本进行分词
+
+# 使用 CountVectorizer 构建词频矩阵
+
+# 打印特征名称（词汇表）
+
+# 找出出现次数最多的前3个词
+
+# 计算第1篇文档和第3篇文档的余弦相似度
+corpus = [
+    "我喜欢打篮球和游泳",
+    "篮球是一项很好的运动",
+    "我更喜欢游泳而不是篮球",
+    "足球和篮球都是球类运动",
+    "今天天气很好适合游泳"
+]
+
+# 执行分词过程
+tokenized = [' '.join(list(jieba.cut(text))) for text in corpus] 
+
+# 使用CountVectorizer()构建词频矩阵
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(tokenized)
+
+# 打印特征名称
+print(vectorizer.get_feature_names_out())
+
+word_freq = X.toarray().sum(axis=0)
+print("词频:", dict(zip(vectorizer.get_feature_names_out(), word_freq)))
+
+
+
+
+# 使用 DictVectorizer 提取特征（注意 name 列应该如何处理？）
+
+# 输出特征名称和特征矩阵
+
+# 将结果转换为 DataFrame 以便查看
+
+# （进阶）编写一个简单函数，根据 category = '电子产品' 和 price > 3000 的规则，手动标记"是否高端电子产品"
+
+data = [
+    {'name': '产品A', 'category': '电子产品', 'price': 2999, 'rating': 4.5},
+    {'name': '产品B', 'category': '服装', 'price': 199, 'rating': 4.2},
+    {'name': '产品C', 'category': '电子产品', 'price': 4599, 'rating': 4.8},
+    {'name': '产品D', 'category': '图书', 'price': 59, 'rating': 4.0},
+    {'name': '产品E', 'category': '服装', 'price': 399, 'rating': 4.3},
+]
+
+data_filtered = [{k : v for k , v in item.items() if k != 'name'}for item in data] # 由于产品名称是固定属性没有预测价值，但是产品种类代表了价格所以有价值需要保留，所以去除name
+
+dictvectorizer = DictVectorizer(sparse = False)
+X = dictvectorizer.fit_transform(data_filtered) 
+
+d = pd.DataFrame(X, columns= dictvectorizer.get_feature_names_out())
+
+# 处理高端电子产品列
+d['是否为高端电子产品'] = False
+d.loc[(d['category=电子产品'] == 1) & (d['price'] > 3000), '是否为高端电子产品'] = True
+
+
+
+
+
+# 提取 text 和 label，将 label 转换为数值（spam=1, ham=0）
+
+# 使用 jieba 对 text 进行中文分词
+
+# 使用 TfidfVectorizer（或 CountVectorizer）提取文本特征
+
+# 划分训练集和测试集（test_size=0.25, random_state=42）
+
+# 使用 MultinomialNB（朴素贝叶斯）训练分类器
+
+# 预测测试集并输出准确率
+
+# （进阶）使用 classification_report 输出精确率、召回率、F1分数
+
+data = [
+    {"text": "免费领取100元优惠券", "label": "spam"},
+    {"text": "会议通知：今天下午3点开会", "label": "ham"},
+    {"text": "恭喜您中奖了，点击领取奖金", "label": "spam"},
+    {"text": "妈妈，今晚回家吃饭吗", "label": "ham"},
+    {"text": "限时特惠，五折抢购", "label": "spam"},
+    {"text": "作业已提交，请查收", "label": "ham"},
+    {"text": "您的账户异常，请立即登录", "label": "spam"},
+    {"text": "周末一起去爬山吗", "label": "ham"},
+]
+
+text = [item['text'] for item in data if 'text' in item]
+label = [1 if item['label'] == 'spam' else 0 for item in data]
+
+text_tokenizer = [' '.join(list(jieba.cut(item))) for item in text]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    text_tokenizer, label,
+    train_size= 0.75,
+    random_state= 42,
+    stratify=label
 )
 
-plt.xlabel('月份')
-plt.ylabel('销售额(万元)')
+text_tokenized = CountVectorizer()
+X_train_vec = text_tokenized.fit_transform(X_train) #对训练集使用fit_transform
+X_test_vec = text_tokenized.transform(X_test) #对测试集使用transform
 
-for i, (x, y) in enumerate(zip(months, sales_2023)):
-    plt.text(i, y + 3, str(y), ha='center', va='bottom', fontsize = 9)
+# 5. 训练分类器
+clf = MultinomialNB()
+clf.fit(X_train_vec, y_train)
 
-for i, (x, y) in enumerate(zip(months, sales_2024)):
-    plt.text(i, y + 3, str(y), ha = 'center', va = 'bottom', fontsize = 9)
+# 6. 预测并输出准确率
+y_pred = clf.predict(X_test_vec)
+print(f"准确率: {accuracy_score(y_test, y_pred):.2f}")
 
-plt.legend(loc = 'upper left', title = '年份', fontsize = 9)
-plt.grid(True, linestyle = '--', alpha = 0.5)
-plt.show()
-'''
-
-'''
-practice2:柱状图
-
-plt.figure(figsize = (10, 8))
-plt.bar(months, sales_2024,
-        color = 'steelblue',
-        edgecolor = 'black', #边框的颜色为黑色
-        linewidth = 1, #边框的线长为1
-        alpha = 0.7
-        )
-plt.title('2024年月度销售额')
-
-for i, (month, sale) in enumerate(zip(months, sales_2024)):
-    plt.text(i, sale + 3, str(sale), ha = 'center', va = 'bottom', fontsize = 9) #ha是水平对齐，va是垂直对齐
-
-plt.ylim(100, 250)
-plt.show()
-'''
-
-'''
-practice3:饼图
-
-products = ['手机', '电脑', '平板', '耳机', '手表']
-sales_ratio = [35, 28, 18, 12, 7]
-plt.figure(figsize= (10, 8))
-#autopct表示小数点位数，explode表示突出，传入的参数是一个列表，shadow表示阴影，startangle是起始角度
-plt.pie(sales_ratio, labels = products, autopct = '%1.1f%%', explode = [0.05, 0, 0, 0, 0], shadow= True, startangle= 90)
-
-plt.title('产品销售额占比')
-plt.show()
-'''
-
-'''
-practice4:散点图加上polyfit进行拟合
-
-ad_cost = [5, 8, 12, 15, 20, 25, 30, 35, 40, 45]
-sales = [50, 65, 80, 95, 110, 130, 145, 160, 175, 190]
-
-plt.figure(figsize= (10, 8))
-plt.title('广告费与销售额关系')
-plt.xlabel('广告费（万元）')
-plt.ylabel('广告费（万元）')
-plt.scatter(ad_cost, sales, color = 'red', alpha = 0.6, s = 100)
-xielv, jieju = np.polyfit(ad_cost, sales, deg = 1) #使用polyfit对直线进行拟合，返回截距和斜率
-
-x_fit = np.linspace(min(ad_cost), max(ad_cost), 100) #获取x坐标的array
-y_fit = x_fit * xielv + jieju #使用计算获取y的array
-
-plt.plot(x_fit, y_fit,
-         color = 'red',
-         linewidth = 1,
-         linestyle = '--'
-         )
-plt.show()
-'''
-
-'''
-practice5:子图布局
-
-fig, axes = plt.subplots(2, 2, figsize = (10, 8))
-axes[0, 0].plot(months, sales_2024,
-                      color = 'steelblue',
-                      label = '2024年销售额图'
-                      )
-
-axes[0, 1].bar(months, sales_2024,
-                     color = 'orange',
-                     edgecolor = 'black',
-                     alpha = 0.8
-                     )
-axes[1, 0].pie(sales_2024, labels = months,
-               autopct = '%1.1f%%',
-               shadow = True,
-               startangle = 90
-               )
-
-axes[1, 1].scatter(months, sales_2024)
-plt.show()
-'''
-
-'''
-practice6:多图叠加
-
-plt.figure(figsize = (10, 8))
-plt.bar(months, sales_2024,
-        color = 'orange',
-        edgecolor = 'black',
-        linewidth = 1,
-        alpha = 0.6,
-        label = '柱状图'
-        )
-plt.plot(months, sales_2024,
-         color = 'steelblue',
-         linewidth = 1,
-         marker = 'o',
-         label = '折线图'
-         )
-plt.legend(loc = 'upper left')
-plt.show()
-'''
-
-'''
-practice7:水平条形图
-
-products = ['手机', '电脑', '平板', '耳机', '手表', '相机']
-sales = [350, 280, 200, 150, 100, 80]
-
-#将两组数据组成一个dataframe，直接在dataframe中进行数值排序
-plt.figure(figsize = (10, 8))
-data = pd.DataFrame({
-    '产品': products,
-    '销量': sales
-}) 
-
-data.sort_values('销量', inplace=True)
-plt.barh(data['产品'], data['销量'],
-         color = 'orange',
-         edgecolor = 'black',
-         linewidth = 1,
-         alpha = 0.5
-         )
-for i, sale in enumerate(data['销量']): #直接使用data里面的数据进行输出
-    plt.text(sale, i, str(sale), ha = 'center', va = 'bottom', fontsize = 9)
-plt.ylabel('产品名称')
-plt.xlabel('销量（台）')
-plt.title('各产品销量排行', fontsize = 9)
-plt.show()
-'''
-
-'''
-practice8:堆叠面积图
-
-months = ['1月', '2月', '3月', '4月', '5月', '6月']
-sales_2023 = [120, 135, 150, 140, 160, 180]
-sales_2024 = [130, 145, 160, 155, 175, 195]
-
-plt.figure(figsize=(10, 6))
-
-# 堆叠面积图：fill_between的第二个参数是起始的y值，第三个参数是截止的y值
-# plt.fill_between(months, 0, sales_2023, alpha=0.5, label='2023年')
-# plt.fill_between(months, sales_2023, [sales_2023[i] + sales_2024[i] for i in range(len(months))], 
-#                  alpha=0.5, label='2024年')
-
-# 或者使用 stackplot（更简单）：直接传入多个y值的序列，每一个序列都加在在前一个上面
-plt.stackplot(months,sales_2023, sales_2024 , labels=['2023年', '2024年'], alpha=0.5)
-
-plt.title('两年销售额对比（面积图）')
-plt.xlabel('月份')
-plt.ylabel('销售额（万元）')
-plt.legend()
-plt.grid(True, alpha=0.3)
-plt.show()
-'''
-
-'''
-practice9:直方图和箱型图
-
-data = np.random.normal(80, 10, 1000)
-fig, axes = plt.subplots(1, 2, figsize = (10, 8))
-axes[0].hist(data, bins = 20, color = 'green', edgecolor = 'black', alpha = 0.7)
-
-axes[1].boxplot(data, vert=False, patch_artist=True, #vert表示方向False表示水平方向，True表示垂直方向，patch_artist表示填充颜色
-                boxprops=dict(facecolor='lightblue', color='black'), #boxprops表示箱体的属性
-                whiskerprops=dict(color='black'), #whiskerprops表示箱线的属性
-                capprops=dict(color='black'), #capprops表示帽线属性
-                medianprops=dict(color='red', linewidth=2))  #medianprops表示中位数线的属性
-fig.suptitle('考试成绩分析')
-plt.show()
-'''
-
-
-months = ['1月', '2月', '3月', '4月', '5月', '6月']
-sales_2024 = [130, 145, 160, 155, 175, 195]
-x = range(len(months))
-
-plt.figure(figsize=(12, 6))
-
-# 绘制折线图
-plt.plot(x, sales_2024, 
-         marker='o', 
-         markersize=8,
-         linewidth=2.5,
-         color='steelblue',
-         label='2024年销售额')
-
-# 设置 X 轴刻度标签
-plt.xticks(x, months)
-
-# 添加数据标签
-for i, sale in enumerate(sales_2024):
-    offset = 5 if sale < 180 else -10
-    va = 'bottom' if sale < 180 else 'top'
-    plt.text(i, sale + offset, str(sale), ha='center', va=va, fontsize=10, fontweight='bold')
-
-# 添加水平参考线（平均值线）
-avg_sales = np.mean(sales_2024)
-plt.axhline(y=float(avg_sales), color='gray', linestyle='--', linewidth=1.5, label=f'平均值: {avg_sales:.1f}')
-
-# 标注最高点
-max_idx = sales_2024.index(max(sales_2024))
-max_month = months[max_idx]
-max_sale = max(sales_2024)
-plt.annotate(f'最高点: {max_sale}万元',
-             xy=(max_idx, max_sale),
-             xytext=(max_idx + 0.5, max_sale + 10),
-             arrowprops=dict(arrowstyle='->', color='red'),
-             fontsize=10, color='red')
-
-# 标题和标签
-plt.title('2024年月度销售额趋势', fontsize=14, fontweight='bold')
-plt.xlabel('月份', fontsize=12)
-plt.ylabel('销售额（万元）', fontsize=12)
-
-# 网格线（虚线，透明度0.3）
-plt.grid(True, linestyle='--', alpha=0.3)
-
-# 图例
-plt.legend(loc='upper left')
-plt.show()
+# 7. 进阶：输出详细评估报告
+print("\n分类报告:")
+print(classification_report(y_test, y_pred, target_names=['ham', 'spam']))
