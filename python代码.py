@@ -1,195 +1,144 @@
-import jieba
-from matplotlib import pyplot as plt
-import pandas as pd
+from multiprocessing import current_process
+
+import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.metrics import accuracy_score, classification_report
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import SelectKBest, f_classif, RFE
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.linear_model import LinearRegression
-from sklearn.feature_extraction.text import CountVectorizer
-# 查看数据的基本信息（形状、列名、数据类型）
+from sklearn.preprocessing import OneHotEncoder, StandardScaler 
 
-# 计算每门科目的平均值、最大值、最小值
+# 1. 创建数据集
+np.random.seed(42)
+n_samples = 500
 
-# 按班级（class）分组，计算每门科目的平均分
+area = np.random.normal(1500, 300, n_samples)
+bedrooms = np.random.randint(1, 5, n_samples)
+age = np.random.randint(0, 50, n_samples)
+city = np.random.choice(['NewYork', 'LA', 'Chicago'], n_samples)
 
-# 绘制数学成绩的直方图（matplotlib）
+price_class = ((area > 1500) & (city != 'Chicago')).astype(int)
 
-# 绘制数学和英语的散点图，观察相关性
-# 数据：学生考试成绩
-data = {
-    'name': ['张三', '李四', '王五', '赵六', '钱七', '孙八', '周九', '吴十'],
-    'math': [85, 92, 78, 88, 95, 76, 89, 91],
-    'english': [78, 88, 85, 90, 92, 80, 86, 89],
-    'science': [90, 85, 82, 88, 94, 79, 91, 93],
-    'class': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B']
-}
-df = pd.DataFrame(data)
-'''
-print(df.info()) #查看基本数据
-print(df.describe()) #使用describe计算每一列的大致信息
+noise_1 = np.random.normal(0, 1, n_samples)
+noise_2 = area * 0.95 + np.random.normal(0, 30, n_samples)
 
-df_class = df.groupby('class')[['math', 'english', 'science']].mean() 
+df = pd.DataFrame({
+    'area': area,
+    'bedrooms': bedrooms,
+    'age': age,
+    'city': city,
+    'noise_1': noise_1,
+    'noise_2': noise_2,
+    'price_class': price_class
+})
 
-fig, axes = plt.subplots(1, 2, figsize = (10, 9))
+# 特征工程
+scaler = StandardScaler()
+data = scaler.fit_transform(df[['area', 'bedrooms', 'age']])
 
+encoder = OneHotEncoder(sparse_output=False)
+encoded_city = encoder.fit_transform(df[['city']])
+
+df['area_per_bedroom'] = df['area'] / df['bedrooms']
+
+# 合并特征（注意：这里用了 area_per_bedroom，不是重复的 area）
+X = np.hstack([data, encoded_city, df[['area_per_bedroom']].values])
+y = df['price_class'].values
+
+feature_names = ['area', 'bedrooms', 'age'] + list(encoder.get_feature_names_out()) + ['area_per_bedroom']
+
+# ========== 关键修正：先划分数据集 ==========
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+print(f"训练集大小: {X_train.shape[0]}")
+print(f"测试集大小: {X_test.shape[0]}")
+print(f"原始特征数量: {X.shape[1]}")
+
+# ========== 1. SelectKBest ==========
+selector = SelectKBest(score_func=f_classif, k=3)
+X_train_kbest = selector.fit_transform(X_train, y_train)  # 只在训练集上 fit
+X_test_kbest = selector.transform(X_test)                  # 测试集只 transform，防止测试结果虚高
+
+selected_mask = selector.get_support()
+selected_features = [feature_names[i] for i in range(len(feature_names)) if selected_mask[i]]
+print(f"SelectKBest 选中的特征: {selected_features}")
+
+# LogisticRegression on SelectKBest
+lr = LogisticRegression(max_iter=1000)
+lr.fit(X_train_kbest, y_train)
+print(f"KBest+LR Acc: {accuracy_score(y_test, lr.predict(X_test_kbest)):.4f}")
+
+# ========== 2. PCA ==========
+pca = PCA(n_components=2)
+X_train_pca = pca.fit_transform(X_train)
+X_test_pca = pca.transform(X_test)
+
+print(f"PCA 方差解释比: {pca.explained_variance_ratio_}")
+
+# RandomForest on PCA
+rfc_pca = RandomForestClassifier(n_estimators=100, random_state=42)
+rfc_pca.fit(X_train_pca, y_train)
+y_pred_pca = rfc_pca.predict(X_test_pca)
+acc_pca = accuracy_score(y_test, y_pred_pca)
+print(f"PCA + RandomForest 准确率: {acc_pca:.4f}")
+
+# ========== 3. RFE ==========
+estimator = RandomForestClassifier(n_estimators=50, random_state=42)
+selector_rfe = RFE(estimator, n_features_to_select=3)
+X_train_rfe = selector_rfe.fit_transform(X_train, y_train)
+X_test_rfe = selector_rfe.transform(X_test)
+
+selected_rfe = [feature_names[i] for i, m in enumerate(selector_rfe.get_support()) if m]
+print(f"RFE 选中的特征: {selected_rfe}")
+
+rfc_rfe = RandomForestClassifier(n_estimators=100, random_state=42)
+rfc_rfe.fit(X_train_rfe, y_train)
+acc_rfe = accuracy_score(y_test, rfc_rfe.predict(X_test_rfe))
+print(f"RFE + RandomForest 准确率: {acc_rfe:.4f}")
+
+# ========== 4. 原始特征（基准）==========
+rfc_original = RandomForestClassifier(n_estimators=100, random_state=42)
+rfc_original.fit(X_train, y_train)
+acc_original = accuracy_score(y_test, rfc_original.predict(X_test))
+print(f"原始特征 + RandomForest 准确率: {acc_original:.4f}")
+
+# ========== 5. SelectKBest + RandomForest ==========
+rfc_kbest = RandomForestClassifier(n_estimators=100, random_state=42)
+rfc_kbest.fit(X_train_kbest, y_train)
+acc_kbest = accuracy_score(y_test, rfc_kbest.predict(X_test_kbest))
+print(f"SelectKBest + RandomForest 准确率: {acc_kbest:.4f}")
+
+# ========== 6. 结果对比 ==========
+print("\n" + "=" * 50)
+print("准确率对比汇总")
+print("=" * 50)
+print(f"原始特征 (基准):     {acc_original:.4f}")
+print(f"SelectKBest (过滤法): {acc_kbest:.4f}")
+print(f"RFE (包装法):         {acc_rfe:.4f}")
+print(f"PCA (无监督降维):     {acc_pca:.4f}")
+print("=" * 50)
+
+# ========== 7. PCA 可视化 ==========
 plt.rcParams['font.sans-serif'] = ['SimHei']
-plt.rcParams['axes.unicode_minus'] = False 
+plt.rcParams['axes.unicode_minus'] = False
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
+scatter1 = axes[0].scatter(X_train_pca[:, 0], X_train_pca[:, 1], 
+                           c=y_train, cmap='coolwarm', alpha=0.6, edgecolors='k')
+axes[0].set_xlabel(f'第一主成分 (方差比: {pca.explained_variance_ratio_[0]:.2%})')
+axes[0].set_ylabel(f'第二主成分 (方差比: {pca.explained_variance_ratio_[1]:.2%})')
+axes[0].set_title('PCA降维后 - 训练集')
+plt.colorbar(scatter1, ax=axes[0], label='价格等级')
 
-axes[0].hist(df['math'], label = '数学成绩分布直方图')
-axes[1].scatter(df['math'], df['english'], label = '数学/英语成绩散点图')
-axes[0].legend(loc = 'upper left')
-axes[1].legend(loc = 'upper left')
-axes[1].set_xlabel('数学/分')
-axes[1].set_ylabel('英语/分')
+scatter2 = axes[1].scatter(X_test_pca[:, 0], X_test_pca[:, 1], 
+                           c=y_test, cmap='coolwarm', alpha=0.6, edgecolors='k')
+axes[1].set_xlabel(f'第一主成分 (方差比: {pca.explained_variance_ratio_[0]:.2%})')
+axes[1].set_ylabel(f'第二主成分 (方差比: {pca.explained_variance_ratio_[1]:.2%})')
+axes[1].set_title('PCA降维后 - 测试集')
+plt.colorbar(scatter2, ax=axes[1], label='价格等级')
 
+plt.tight_layout()
 plt.show()
-'''
-
-
-# 将数据划分为训练集和测试集（test_size=0.3, random_state=42）
-
-# 使用 OneHotEncoder 对 class 特征进行编码
-
-# 将编码后的特征与数值特征合并
-
-# 使用 LinearRegression（线性回归）训练模型
-
-# 计算测试集上的预测准确率（使用 R² 分数）
-class_encoder = OneHotEncoder(sparse_output= False)
-encoded_class = class_encoder.fit_transform(df[['class']])
-
-X = np.hstack([df[['math', 'english']], encoded_class])
-y = df['science']
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    train_size= 0.7,
-    random_state= 42
-)
-
-model = LinearRegression()
-model.fit(X_train, y_train)
-print(f"R² 分数: {model.score(X_test, y_test):.3f}")
-
-
-
-# 使用 jieba 对所有文本进行分词
-
-# 使用 CountVectorizer 构建词频矩阵
-
-# 打印特征名称（词汇表）
-
-# 找出出现次数最多的前3个词
-
-# 计算第1篇文档和第3篇文档的余弦相似度
-corpus = [
-    "我喜欢打篮球和游泳",
-    "篮球是一项很好的运动",
-    "我更喜欢游泳而不是篮球",
-    "足球和篮球都是球类运动",
-    "今天天气很好适合游泳"
-]
-
-# 执行分词过程
-tokenized = [' '.join(list(jieba.cut(text))) for text in corpus] 
-
-# 使用CountVectorizer()构建词频矩阵
-vectorizer = CountVectorizer()
-X = vectorizer.fit_transform(tokenized)
-
-# 打印特征名称
-print(vectorizer.get_feature_names_out())
-
-word_freq = X.toarray().sum(axis=0)
-print("词频:", dict(zip(vectorizer.get_feature_names_out(), word_freq)))
-
-
-
-
-# 使用 DictVectorizer 提取特征（注意 name 列应该如何处理？）
-
-# 输出特征名称和特征矩阵
-
-# 将结果转换为 DataFrame 以便查看
-
-# （进阶）编写一个简单函数，根据 category = '电子产品' 和 price > 3000 的规则，手动标记"是否高端电子产品"
-
-data = [
-    {'name': '产品A', 'category': '电子产品', 'price': 2999, 'rating': 4.5},
-    {'name': '产品B', 'category': '服装', 'price': 199, 'rating': 4.2},
-    {'name': '产品C', 'category': '电子产品', 'price': 4599, 'rating': 4.8},
-    {'name': '产品D', 'category': '图书', 'price': 59, 'rating': 4.0},
-    {'name': '产品E', 'category': '服装', 'price': 399, 'rating': 4.3},
-]
-
-data_filtered = [{k : v for k , v in item.items() if k != 'name'}for item in data] # 由于产品名称是固定属性没有预测价值，但是产品种类代表了价格所以有价值需要保留，所以去除name
-
-dictvectorizer = DictVectorizer(sparse = False)
-X = dictvectorizer.fit_transform(data_filtered) 
-
-d = pd.DataFrame(X, columns= dictvectorizer.get_feature_names_out())
-
-# 处理高端电子产品列
-d['是否为高端电子产品'] = False
-d.loc[(d['category=电子产品'] == 1) & (d['price'] > 3000), '是否为高端电子产品'] = True
-
-
-
-
-
-# 提取 text 和 label，将 label 转换为数值（spam=1, ham=0）
-
-# 使用 jieba 对 text 进行中文分词
-
-# 使用 TfidfVectorizer（或 CountVectorizer）提取文本特征
-
-# 划分训练集和测试集（test_size=0.25, random_state=42）
-
-# 使用 MultinomialNB（朴素贝叶斯）训练分类器
-
-# 预测测试集并输出准确率
-
-# （进阶）使用 classification_report 输出精确率、召回率、F1分数
-
-data = [
-    {"text": "免费领取100元优惠券", "label": "spam"},
-    {"text": "会议通知：今天下午3点开会", "label": "ham"},
-    {"text": "恭喜您中奖了，点击领取奖金", "label": "spam"},
-    {"text": "妈妈，今晚回家吃饭吗", "label": "ham"},
-    {"text": "限时特惠，五折抢购", "label": "spam"},
-    {"text": "作业已提交，请查收", "label": "ham"},
-    {"text": "您的账户异常，请立即登录", "label": "spam"},
-    {"text": "周末一起去爬山吗", "label": "ham"},
-]
-
-text = [item['text'] for item in data if 'text' in item]
-label = [1 if item['label'] == 'spam' else 0 for item in data]
-
-text_tokenizer = [' '.join(list(jieba.cut(item))) for item in text]
-
-X_train, X_test, y_train, y_test = train_test_split(
-    text_tokenizer, label,
-    train_size= 0.75,
-    random_state= 42,
-    stratify=label
-)
-
-text_tokenized = CountVectorizer()
-X_train_vec = text_tokenized.fit_transform(X_train) #对训练集使用fit_transform
-X_test_vec = text_tokenized.transform(X_test) #对测试集使用transform
-
-# 5. 训练分类器
-clf = MultinomialNB()
-clf.fit(X_train_vec, y_train)
-
-# 6. 预测并输出准确率
-y_pred = clf.predict(X_test_vec)
-print(f"准确率: {accuracy_score(y_test, y_pred):.2f}")
-
-# 7. 进阶：输出详细评估报告
-print("\n分类报告:")
-print(classification_report(y_test, y_pred, target_names=['ham', 'spam']))
